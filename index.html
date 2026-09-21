@@ -347,6 +347,9 @@
 
 <input type="file" id="fileInput" accept="application/json" style="display:none">
 
+<!-- 词库文件：跟着仓库一起走，手机/电脑打开都能自动读到 -->
+<script src="data.js"></script>
+
 <script>
 (function () {
   const STORE_KEY = 'cet6_vocab_v1';
@@ -1084,6 +1087,33 @@
       else if (e.key === 'Escape') rev.classList.remove('show');
     }
   });
+
+  // ---------- 启动：自动并入 data.js 里的词库 ----------
+  // 词库随页面一起分发，任何设备打开都能拿到同样的单词；
+  // 已经存在的词只更新内容，本机的「已掌握 / 难词」标记不受影响。
+  function syncFromDataFile() {
+    if (!window.CET6_DATA || !Array.isArray(window.CET6_DATA.units)) return null;
+    try {
+      return mergeImport(window.CET6_DATA);
+    } catch (e) {
+      console.warn('data.js 同步失败', e);
+      return null;
+    }
+  }
+
+  (function boot() {
+    const r = syncFromDataFile();
+    if (r && (r.addedWords || r.addedLessons || r.addedUnits)) {
+      save();
+      console.log(`已从 data.js 同步词库：新增 ${r.addedWords} 个单词、${r.updatedWords} 个更新`);
+    }
+    // 兜底：当前选中的课若已不存在，回到第一课
+    let u = findUnit(curUnitId);
+    if (!u) { u = state.units[0]; curUnitId = u.id; }
+    if (!u.lessons.find(l => l.id === curLessonId)) {
+      curLessonId = u.lessons[0].id;
+    }
+  })();
 
   render();
 })();
